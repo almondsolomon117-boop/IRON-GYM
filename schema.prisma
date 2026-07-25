@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String
+  planType  String    @default("30") // "30" or "60"
+  planPrice Int       @default(3500)
+  regDate   DateTime  @default(now())
+  expDate   DateTime
+  daysLeft  Int
+  status    String    @default("ACTIVE") // ACTIVE, EXPIRING, EXPIRED
+  payments  Payment[]
+  checkIns  CheckIn[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([status])
+  @@index([phone])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  amount    Int
+  planDays  Int
+  planType  String
+  paidDate  DateTime @default(now())
+  method    String   @default("cash") // cash, telebirr, cbe
+  receiptId String?  @unique
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([paidDate])
+}
+
+model Trainer {
+  id         String              @id @default(cuid())
+  name       String
+  phone      String
+  specialty  String
+  salary     Float
+  attendance TrainerAttendance[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([phone])
+}
+
+model TrainerAttendance {
+  id        String   @id @default(cuid())
+  trainerId String
+  trainer   Trainer  @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  date      DateTime
+  present   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([trainerId, date])
+  @@index([trainerId])
+  @@index([date])
+}
+
+model CheckIn {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  checkInTime DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([clientId])
+  @@index([checkInTime])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String // DELETE_CLIENT, DELETE_TRAINER, DATABASE_RESTORE, EDIT_CLIENT, EDIT_TRAINER
+  itemType   String
+  details    String
+  performedBy String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Backup {
+  id          String   @id @default(cuid())
+  snapshotId  String   @unique
+  timestamp   DateTime @default(now())
+  recordCount Int
+  dataJson    String
+  restoredBy  String?
+  createdAt   DateTime @default(now())
+}
